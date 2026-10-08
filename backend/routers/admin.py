@@ -1,41 +1,42 @@
+from datetime import date, datetime, time
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+
+from auth import hash_password, require_admin
 from database import get_db
-from auth import get_current_user, hash_password, require_admin, get_current_user
 import models
 import schemas
 
 router = APIRouter()
 
-# ─── Society ────────────────────────────────────────────
+
 @router.post("/society", response_model=schemas.SocietyOut)
 def create_society(
     payload: schemas.SocietyCreate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_admin)
+    current_user: models.User = Depends(require_admin),
 ):
-    society = models.Society(
-        name=payload.name,
-        address=payload.address
-    )
+    society = models.Society(name=payload.name, address=payload.address)
     db.add(society)
     db.commit()
     db.refresh(society)
     return society
 
+
 @router.get("/flats", response_model=list[schemas.FlatOut])
 def get_flats(
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: models.User = Depends(require_admin),
 ):
-    return db.query(models.Society).all()
+    return db.query(models.Flat).all()
 
-# ─── Flats ──────────────────────────────────────────────
+
 @router.post("/flat", response_model=schemas.FlatOut)
 def create_flat(
     payload: schemas.FlatCreate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_admin)
+    current_user: models.User = Depends(require_admin),
 ):
     society = db.query(models.Society).filter(
         models.Society.id == payload.society_id
@@ -46,25 +47,19 @@ def create_flat(
     flat = models.Flat(
         flat_number=payload.flat_number,
         floor=payload.floor,
-        society_id=payload.society_id
+        society_id=payload.society_id,
     )
     db.add(flat)
     db.commit()
     db.refresh(flat)
     return flat
 
-@router.get("/flats", response_model=list[schemas.FlatOut])
-def get_flats(
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_admin)
-):
-    return db.query(models.Flat).all()
 
 @router.delete("/flat/{flat_id}")
 def delete_flat(
     flat_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_admin)
+    current_user: models.User = Depends(require_admin),
 ):
     flat = db.query(models.Flat).filter(models.Flat.id == flat_id).first()
     if not flat:
@@ -73,23 +68,22 @@ def delete_flat(
     db.commit()
     return {"message": "Flat deleted"}
 
-# ─── Users ──────────────────────────────────────────────
+
 @router.get("/users", response_model=list[schemas.UserOut])
 def get_all_users(
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_admin)
+    current_user: models.User = Depends(require_admin),
 ):
     return db.query(models.User).all()
+
 
 @router.post("/guard", response_model=schemas.UserOut)
 def create_guard(
     payload: schemas.UserCreate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_admin)
+    current_user: models.User = Depends(require_admin),
 ):
-    existing = db.query(models.User).filter(
-        models.User.email == payload.email
-    ).first()
+    existing = db.query(models.User).filter(models.User.email == payload.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
 
@@ -99,34 +93,38 @@ def create_guard(
         hashed_password=hash_password(payload.password),
         phone=payload.phone,
         role=models.UserRole.guard,
-        flat_id=None
+        flat_id=None,
     )
     db.add(guard)
     db.commit()
     db.refresh(guard)
     return guard
 
+
 @router.delete("/user/{user_id}")
 def delete_user(
     user_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_admin)
+    current_user: models.User = Depends(require_admin),
 ):
+    if user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Admins cannot delete their own account")
+
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    db.delete(user)
-    db.commit()
-    return {"message": "User deleted"}
 
-# ─── Reports ────────────────────────────────────────────
+    user.is_active = False
+    db.commit()
+    return {"message": "User deactivated"}
+
+
 @router.get("/reports/summary")
 def get_summary(
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_admin)
+    current_user: models.User = Depends(require_admin),
 ):
-    from datetime import datetime, date
-    today = datetime.combine(date.today(), datetime.min.time())
+    today = datetime.combine(date.today(), time.min)
 
     total_visitors = db.query(models.Visitor).count()
     today_visitors = db.query(models.Visitor).filter(
@@ -143,10 +141,12 @@ def get_summary(
     ).count()
     total_flats = db.query(models.Flat).count()
     total_residents = db.query(models.User).filter(
-        models.User.role == models.UserRole.resident
+        models.User.role == models.UserRole.resident,
+        models.User.is_active.is_(True),
     ).count()
     total_guards = db.query(models.User).filter(
-        models.User.role == models.UserRole.guard
+        models.User.role == models.UserRole.guard,
+        models.User.is_active.is_(True),
     ).count()
 
     return {
@@ -157,13 +157,14 @@ def get_summary(
         "denied": denied,
         "total_flats": total_flats,
         "total_residents": total_residents,
-        "total_guards": total_guards
+        "total_guards": total_guards,
     }
+
 
 @router.get("/reports/visitors", response_model=list[schemas.VisitorOut])
 def get_all_visitors_report(
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_admin)
+    current_user: models.User = Depends(require_admin),
 ):
     return db.query(models.Visitor).order_by(
         models.Visitor.entry_time.desc()

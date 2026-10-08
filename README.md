@@ -1,175 +1,135 @@
-# 🏢 Society Gate Management App
+# Society Gate Management
 
-A full-stack web application for managing visitor entry and approval in a residential society. Security guards log visitors at the gate, residents get notified and can approve or deny entry instantly.
+A full-stack visitor management system for residential societies. Guards register visitors at the gate, residents approve or deny entry, and administrators manage society operations.
 
----
+## Why this project
 
-## 🚀 Features
+This project demonstrates practical backend engineering with **FastAPI, PostgreSQL, SQLAlchemy, JWT authentication, role-based authorization, file uploads, and third-party service integration**.
 
-- 👮 **Guard Panel** — Add visitors, upload photos, track entry/exit
-- 🏠 **Resident Panel** — Approve or deny visitors, view history, manage frequent visitors
-- ⚙️ **Admin Panel** — Manage societies, flats, guards and view reports
-- 📱 **WhatsApp Notifications** — Residents get notified via WhatsApp when a visitor arrives
-- 📷 **Photo Capture** — Guards can take visitor photos at entry
-- 🚗 **Vehicle Tracking** — Log visitor vehicle numbers
-- 🔐 **JWT Authentication** — Secure login for all 3 roles
-- 📊 **Live Dashboard** — Real time stats for pending, inside, approved, denied
+## Key Features
 
----
+- **Role-based access** — Admin, Guard, and Resident workflows
+- **JWT authentication** with password hashing and account status checks
+- **Visitor workflow** — pending → approved/denied → exited
+- **Visitor photos** stored through Cloudinary with file validation
+- **WhatsApp notifications** through Twilio
+- **Admin reporting** for visitor and society activity
+- **Frequent visitor management** for residents
+- **React dashboards** for each role
 
-## 🛠️ Tech Stack
+## Architecture
 
-### Backend
-- Python 3.12
-- FastAPI
-- PostgreSQL
-- SQLAlchemy ORM
-- JWT Authentication (python-jose)
-- Password Hashing (bcrypt + passlib)
-- Twilio (WhatsApp notifications)
-- Cloudinary (photo storage)
-
-### Frontend
-- React 18
-- Vite
-- React Router DOM
-- Axios
-- React Hook Form
-
----
-
-## 📁 Project Structure
-society-gate/
-├── backend/
-│   ├── main.py              # FastAPI app entry point
-│   ├── models.py            # Database models
-│   ├── schemas.py           # Pydantic schemas
-│   ├── database.py          # PostgreSQL connection
-│   ├── auth.py              # JWT authentication
-│   ├── requirements.txt     # Python dependencies
-│   └── routers/
-│       ├── visitors.py      # Visitor management
-│       ├── residents.py     # Resident actions
-│       ├── admin.py         # Admin management
-│       └── whatsapp.py      # WhatsApp notifications
-└── frontend/
-└── src/
-├── pages/           # Login, Guard, Resident, Admin dashboards
-├── components/      # Navbar, ProtectedRoute, VisitorCard
-└── api/             # Axios API calls
----
-
-## ⚙️ Setup & Installation
-
-### Prerequisites
-- Python 3.12+
-- Node.js 20+
-- PostgreSQL 15
-- Twilio account (for WhatsApp)
-- Cloudinary account (for photos)
-
-### 1. Clone the repository
-```bash
-git clone https://github.com/sangam-sharma/society-gate.git
-cd society-gate
+```text
+React + Vite
+     │
+     │ REST / JWT
+     ▼
+FastAPI
+ ├── Authentication
+ ├── Visitor APIs
+ ├── Resident APIs
+ ├── Admin APIs
+ └── WhatsApp integration
+     │
+     ├──────────────► PostgreSQL
+     ├──────────────► Cloudinary
+     └──────────────► Twilio WhatsApp
 ```
 
-### 2. Backend setup
+## Tech Stack
+
+**Backend:** Python, FastAPI, SQLAlchemy, PostgreSQL, Pydantic, JWT, bcrypt
+**Frontend:** React, Vite, React Router, Axios
+**Integrations:** Twilio WhatsApp, Cloudinary
+
+## Project Structure
+
+```text
+society-gate/
+├── backend/
+│   ├── main.py
+│   ├── auth.py
+│   ├── database.py
+│   ├── models.py
+│   ├── schemas.py
+│   └── routers/
+│       ├── auth.py
+│       ├── visitors.py
+│       ├── residents.py
+│       ├── admin.py
+│       └── whatsapp.py
+└── frontend/
+    └── src/
+        ├── api/
+        ├── components/
+        └── pages/
+```
+
+## Local Setup
+
+### Backend
+
 ```bash
 cd backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+cp .env.example .env
 ```
 
-### 3. Create `.env` file in backend folder
-DATABASE_URL=postgresql://gate_user:yourpassword@localhost/society_gate
-SECRET_KEY=your_secret_key
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=1440
-TWILIO_ACCOUNT_SID=your_twilio_sid
-TWILIO_AUTH_TOKEN=your_twilio_token
-TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
-### 4. Setup PostgreSQL
-```bash
-psql postgres
-CREATE DATABASE society_gate;
-CREATE USER gate_user WITH PASSWORD 'yourpassword';
-GRANT ALL PRIVILEGES ON DATABASE society_gate TO gate_user;
-GRANT ALL ON SCHEMA public TO gate_user;
-\q
-```
+Fill in the values in `backend/.env`.
 
-### 5. Start backend
+Start the API:
+
 ```bash
 uvicorn main:app --reload
 ```
 
-### 6. Frontend setup
+API documentation:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+### Frontend
+
 ```bash
-cd ../frontend
+cd frontend
 npm install
 npm run dev
 ```
 
----
+Optional frontend environment variable:
 
-## 👤 Default Users
-
-Create admin user via terminal:
-```python
-python3 -c "
-from database import SessionLocal
-from models import User, UserRole
-from auth import hash_password
-
-db = SessionLocal()
-admin = User(
-    name='Admin',
-    email='admin@society.com',
-    hashed_password=hash_password('admin123'),
-    phone='9999999999',
-    role=UserRole.admin,
-    flat_id=None
-)
-db.add(admin)
-db.commit()
-db.close()
-"
+```env
+VITE_API_URL=http://127.0.0.1:8000
 ```
 
----
+## Database
 
-## 🔐 User Roles
+The current standalone version creates missing SQLAlchemy tables on startup for easy local setup. For production deployment, the next step would be to manage schema changes with Alembic migrations.
 
-| Role | Access | Created by |
-|---|---|---|
-| Admin | Full access, manage everything | Developer via terminal |
-| Guard | Add visitors, track entry/exit | Admin via dashboard |
-| Resident | Approve/deny visitors, view history | Admin or terminal |
+## User Roles
 
----
+| Role | Responsibilities |
+|---|---|
+| Admin | Manage societies, flats, guards and reports |
+| Guard | Register visitors and manage entry/exit |
+| Resident | Approve/deny visitors and manage frequent visitors |
 
-## 📱 App Screenshots
+Public registration creates **resident accounts only**. Admins create guard accounts from the protected admin API.
 
-| Login | Guard Dashboard | Resident Dashboard | Admin Dashboard |
-|---|---|---|---|
-| Email + Password login for all roles | Add visitors, approve/deny, track | Pending requests, history, frequent visitors | Manage societies, flats, guards |
+## Security Highlights
 
----
+- Passwords are hashed with bcrypt.
+- JWTs expire and are validated against active database users.
+- API endpoints enforce role-based authorization.
+- Residents can access only visitors associated with their own flat.
+- Visitor status transitions are validated.
+- Visitor image uploads are restricted by type and size.
+- WhatsApp approval links do not directly mutate visitor state.
+- Secrets are loaded from environment variables and are not committed.
 
-## 🌐 API Documentation
+## License
 
-Once the backend is running visit: http://127.0.0.1:8000/docs
----
-
-## 📝 License
-
-MIT License — feel free to use and modify.
-
----
-
-Built with ❤️ by Sangam Sharma
+MIT

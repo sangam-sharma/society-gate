@@ -1,20 +1,24 @@
-from pydantic import BaseModel, EmailStr
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, EmailStr, Field
+
 from models import UserRole, VisitorStatus
 
-# ─── Auth ───────────────────────────────────────────────
+
 class UserCreate(BaseModel):
-    name: str
+    name: str = Field(min_length=2, max_length=100)
     email: EmailStr
-    password: str
-    phone: Optional[str] = None
+    password: str = Field(min_length=8)
+    phone: Optional[str] = Field(default=None, max_length=20)
     role: UserRole = UserRole.resident
     flat_id: Optional[int] = None
+
 
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
 
 class UserOut(BaseModel):
     id: int
@@ -29,6 +33,7 @@ class UserOut(BaseModel):
     class Config:
         from_attributes = True
 
+
 class Token(BaseModel):
     access_token: str
     token_type: str
@@ -36,10 +41,11 @@ class Token(BaseModel):
     user_id: int
     flat_id: Optional[int]
 
-# ─── Society ────────────────────────────────────────────
+
 class SocietyCreate(BaseModel):
-    name: str
-    address: Optional[str] = None
+    name: str = Field(min_length=2, max_length=150)
+    address: Optional[str] = Field(default=None, max_length=255)
+
 
 class SocietyOut(BaseModel):
     id: int
@@ -50,11 +56,12 @@ class SocietyOut(BaseModel):
     class Config:
         from_attributes = True
 
-# ─── Flat ───────────────────────────────────────────────
+
 class FlatCreate(BaseModel):
-    flat_number: str
-    floor: Optional[str] = None
+    flat_number: str = Field(min_length=1, max_length=30)
+    floor: Optional[str] = Field(default=None, max_length=30)
     society_id: int
+
 
 class FlatOut(BaseModel):
     id: int
@@ -66,13 +73,14 @@ class FlatOut(BaseModel):
     class Config:
         from_attributes = True
 
-# ─── Visitor ────────────────────────────────────────────
+
 class VisitorCreate(BaseModel):
-    name: str
-    phone: Optional[str] = None
-    purpose: str
-    vehicle_number: Optional[str] = None
+    name: str = Field(min_length=2, max_length=100)
+    phone: Optional[str] = Field(default=None, max_length=20)
+    purpose: str = Field(min_length=2, max_length=255)
+    vehicle_number: Optional[str] = Field(default=None, max_length=30)
     flat_id: int
+
 
 class VisitorOut(BaseModel):
     id: int
@@ -90,15 +98,17 @@ class VisitorOut(BaseModel):
     class Config:
         from_attributes = True
 
+
 class VisitorStatusUpdate(BaseModel):
     status: VisitorStatus
 
-# ─── Frequent Visitor ───────────────────────────────────
+
 class FrequentVisitorCreate(BaseModel):
-    name: str
-    phone: Optional[str] = None
-    purpose: str
-    flat_id: int
+    name: str = Field(min_length=2, max_length=100)
+    phone: Optional[str] = Field(default=None, max_length=20)
+    purpose: str = Field(min_length=2, max_length=255)
+    flat_id: Optional[int] = None
+
 
 class FrequentVisitorOut(BaseModel):
     id: int

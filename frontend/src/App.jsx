@@ -3,7 +3,6 @@ import Login from './pages/Login'
 import GuardDashboard from './pages/GuardDashboard'
 import ResidentDashboard from './pages/ResidentDashboard'
 import AdminDashboard from './pages/AdminDashboard'
-import ApprovePage from './pages/ApprovePage'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
@@ -12,7 +11,6 @@ function App() {
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<Login />} />
-        <Route path="/approve/:visitorId/:action" element={<ApprovePage />} />
 
         {/* Guard routes */}
         <Route
